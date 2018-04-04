@@ -57,7 +57,6 @@ public class Demo1Fragment extends Fragment {
                     tvLoad.setText("没有更多数据了");
                     break;
             }
-
         }
     };
     private RefreashRecyclerView mRv;
