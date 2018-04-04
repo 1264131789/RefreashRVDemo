@@ -18,7 +18,7 @@ public class RefreashRecyclerView extends RecyclerView {
     private boolean isFristLayout = true;
     private float mDownX;
     private float mDownY;
-    private int mHeaderViewMeasuredHeight;
+    private static int sHeaderViewMeasuredHeight;
     private float mDx;
     private float mDy;
 
@@ -32,25 +32,30 @@ public class RefreashRecyclerView extends RecyclerView {
 
     public RefreashRecyclerView(Context context, @Nullable AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+        isFristLayout = true;
     }
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
+        Log.d(TAG, "onLayout: " + sHeaderViewMeasuredHeight);
         if (isFristLayout) {
-            mHeaderViewMeasuredHeight = mHeaderView.getMeasuredHeight();
-            updateMargin(-mHeaderViewMeasuredHeight);
-            isFristLayout = false;
+            //将sHeaderViewMeasuredHeight设置为static，只要是为了防止页面间切换出现bug
+            if (sHeaderViewMeasuredHeight == 0) {//只有当第一次layout时才会为sHeaderViewMeasuredHeight赋值
+                sHeaderViewMeasuredHeight = mHeaderView.getMeasuredHeight();//获取HeaderView的高度
+            }
+            updateMargin(-sHeaderViewMeasuredHeight);//修改HeaderView的TopMargin值使其隐藏
         }
     }
 
-    public void setHeaderView(View headerView){
+    public void setHeaderView(View headerView) {
         mHeaderView = headerView;
     }
 
-    public void setFooterView(View footerView){
+    public void setFooterView(View footerView) {
         mFooterView = footerView;
     }
+
     @Override
     public void setAdapter(Adapter adapter) {
         mRefreashAdapter = new RefreashAdapter(adapter);
@@ -59,6 +64,7 @@ public class RefreashRecyclerView extends RecyclerView {
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
+        //下拉刷新处理
         if (mHeaderView == getChildAt(0)) {
             switch (e.getAction()) {
                 case MotionEvent.ACTION_DOWN:
@@ -71,12 +77,10 @@ public class RefreashRecyclerView extends RecyclerView {
                     mDx = moveX - mDownX;
                     mDy = moveY - mDownY;
                     if (Math.abs(mDy) > Math.abs(mDx) && mDy > 0) {
-                        if (mDy < 3 * mHeaderViewMeasuredHeight) {
-                            updateMargin(-mHeaderViewMeasuredHeight + (int) mDy);
-                            LayoutParams layoutParams = (LayoutParams) mHeaderView.getLayoutParams();
-                            Log.d(TAG, "updateMargin: "+layoutParams.topMargin);
+                        if (mDy < 2 * sHeaderViewMeasuredHeight) {//小于两倍height时，逐渐修改TopMargin,使HeaderView逐渐显现出来
+                            updateMargin(-sHeaderViewMeasuredHeight + (int) mDy);
                             if (mOnPullDownListener != null) {
-                                mOnPullDownListener.onPullDownProgress(mDy / mHeaderViewMeasuredHeight);
+                                mOnPullDownListener.onPullDownProgress(mDy / sHeaderViewMeasuredHeight);//将占比返回给监听者
                             }
                         }
                     }
@@ -87,13 +91,13 @@ public class RefreashRecyclerView extends RecyclerView {
                     mDx = upX - mDownX;
                     mDy = upY - mDownY;
                     if (Math.abs(mDy) > Math.abs(mDx) && mDy > 0) {
-                        if (mDy < mHeaderViewMeasuredHeight * 2 / 3) {
-                            updateMargin(-mHeaderViewMeasuredHeight);
-                        } else {
+                        if (mDy < sHeaderViewMeasuredHeight * 2 / 3) {//小于两倍height时，TopMargin置为-sHeaderViewMeasuredHeight，使其隐藏
+                            updateMargin(-sHeaderViewMeasuredHeight);
+                        } else {//否则使其完全显现
                             updateMargin(0);
                             if (mOnRefreshListener != null) {
                                 //下拉释放后开始刷新
-                                mOnRefreshListener.onStartRefresh();
+                                mOnRefreshListener.onStartRefresh();//通知监听者开始刷新
                             }
                         }
                     }
@@ -101,20 +105,21 @@ public class RefreashRecyclerView extends RecyclerView {
             }
         }
 
+        //上拉加载处理
         if (mFooterView == getChildAt(getChildCount() - 1)) {
             switch (e.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    mDownX=e.getX();
-                    mDownY=e.getY();
+                    mDownX = e.getX();
+                    mDownY = e.getY();
                     break;
                 case MotionEvent.ACTION_UP:
                     float upX = e.getX();
                     float upY = e.getY();
                     mDx = upX - mDownX;
                     mDy = upY - mDownY;
-                    if (Math.abs(mDy)>Math.abs(mDx)&&mDy<-80){
-                        if (mOnLoadMoreListener!=null){
-                            mOnLoadMoreListener.onLoadMoreStart();
+                    if (Math.abs(mDy) > Math.abs(mDx) && mDy < -80) {//上拉加载时，mDy < -80可以通过此处调节加载的灵敏度，值越小上拉所需的距离约大
+                        if (mOnLoadMoreListener != null) {
+                            mOnLoadMoreListener.onLoadMoreStart();//通知监听者开始加载
                         }
                     }
                     break;
@@ -123,21 +128,24 @@ public class RefreashRecyclerView extends RecyclerView {
         return super.onTouchEvent(e);
     }
 
+    //修改marginTop控制HeaderView的显示
     private void updateMargin(int marginTop) {
         mHeaderView.setTop(marginTop);//由于单独修改margin，top没变，所以top也要修改
         LayoutParams layoutParams = (LayoutParams) mHeaderView.getLayoutParams();
         layoutParams.setMargins(layoutParams.leftMargin, marginTop, layoutParams.rightMargin, layoutParams.bottomMargin);
         mHeaderView.setLayoutParams(layoutParams);
+        isFristLayout = false;
     }
 
+    //刷新结束后调用该方法隐藏HeaderView
     public void refreshEnd() {
         if (Looper.getMainLooper().getThread() == Thread.currentThread()) {
-            updateMargin(-mHeaderViewMeasuredHeight);
+            updateMargin(-sHeaderViewMeasuredHeight);
         } else {
             mHeaderView.post(new Runnable() {
                 @Override
                 public void run() {
-                    updateMargin(-mHeaderViewMeasuredHeight);
+                    updateMargin(-sHeaderViewMeasuredHeight);
                 }
             });
         }
@@ -173,14 +181,15 @@ public class RefreashRecyclerView extends RecyclerView {
     }
 
     //如果没有更多的加载项目可以移除OnLoadMoreListener
-    public void removeOnLoadMoreListener(){
-        mOnLoadMoreListener=null;
+    public void removeOnLoadMoreListener() {
+        mOnLoadMoreListener = null;
     }
 
     public interface OnLoadMoreListener {
         void onLoadMoreStart();
     }
 
+    //自定义adapter加入header和footer
     private class RefreashAdapter extends RecyclerView.Adapter {
         private final int HEADER_TYPE = 0;
         private final int NORMAL_TYPE = 1;

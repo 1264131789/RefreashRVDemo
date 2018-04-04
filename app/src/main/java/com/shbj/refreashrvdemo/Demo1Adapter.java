@@ -1,14 +1,5 @@
 package com.shbj.refreashrvdemo;
 
-/*
- *  @项目名：  Chapter3_ViewEvent 
- *  @包名：    com.itheima.chapter3_viewevent.adapter
- *  @文件名:   Demo1Adapter
- *  @创建者:   shenbinjian
- *  @创建时间:  2018/4/2 21:39
- *  @描述：    TODO
- */
-
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
