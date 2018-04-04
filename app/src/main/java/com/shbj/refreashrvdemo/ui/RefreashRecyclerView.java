@@ -90,7 +90,7 @@ public class RefreashRecyclerView extends RecyclerView {
                     float upY = e.getY();
                     mDx = upX - mDownX;
                     mDy = upY - mDownY;
-                    if (Math.abs(mDy) > Math.abs(mDx) && mDy > 0) {
+                    if (Math.abs(mDy) > Math.abs(mDx) && mDy > 0 && mHeaderView.getTop() > -sHeaderViewMeasuredHeight) {
                         if (mDy < sHeaderViewMeasuredHeight * 2 / 3) {//小于两倍height时，TopMargin置为-sHeaderViewMeasuredHeight，使其隐藏
                             updateMargin(-sHeaderViewMeasuredHeight);
                         } else {//否则使其完全显现
