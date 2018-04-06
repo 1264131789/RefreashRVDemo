@@ -128,6 +128,16 @@ public class RefreashRecyclerView extends RecyclerView {
         return super.onTouchEvent(e);
     }
 
+    //对滑动过程进行监听，防止滑动到header时其显示出来
+    @Override
+    public void onScrollStateChanged(int state) {
+        super.onScrollStateChanged(state);
+        if (state == SCROLL_STATE_SETTLING && mHeaderView == getChildAt(0)) {
+            updateMargin(-sHeaderViewMeasuredHeight);
+        }
+    }
+
+
     //修改marginTop控制HeaderView的显示
     private void updateMargin(int marginTop) {
         mHeaderView.setTop(marginTop);//由于单独修改margin，top没变，所以top也要修改
